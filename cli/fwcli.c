@@ -51,6 +51,7 @@ int parse_nat_type(const char *nat_type_str) {
         printf("Invalid NAT type: %s. Must be 'src' or 'dest'.\n", nat_type_str);
         exit(1);
     }
+    return 0;
 }
 
 // 解析并执行命令

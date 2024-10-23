@@ -13,10 +13,14 @@ PWD := $(shell pwd)  # 当前工作目录路径
 
 # 编译内核模块
 build:
-	$(MAKE) -C $(KDIR) M=$(PWD) EXTRA_CFLAGS="$(EXTRA_CFLAGS)" modules  # 确保编译时包含头文件路径
+	$(MAKE) -C $(KDIR) M=$(PWD) EXTRA_CFLAGS="$(EXTRA_CFLAGS)" modules
+	@rm -f *.o *.mod.o *.mod.c *.symvers *.order *.ko.cmd *.o.cmd *.tmp_versions
 
 # 清理构建文件
 clean:
 	$(MAKE) -C $(KDIR) M=$(PWD) clean
+	@rm -f *.o *.mod.o *.mod.c *.symvers *.order *.ko.cmd *.o.cmd
+	@rm -rf .tmp_versions
 
-# TODO: 实现 Docker 安装测试
+# 伪目标
+.PHONY: build clean

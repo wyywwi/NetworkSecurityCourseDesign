@@ -14,6 +14,10 @@
 // Netlink 用户定义的协议号，必须与内核中定义的协议号一致
 #define NETLINK_USER 31
 
+// NAT相关
+#define NAT_TYPE_DEST 1
+#define NAT_TYPE_SRC  2
+
 // CLI命令枚举
 enum CommandType {
     CMD_ADD_RULE,
@@ -78,7 +82,8 @@ struct ConnTrackInfo {
 
 // Netlink 消息发送函数声明
 int init_netlink_socket(void);
-void send_netlink_msg(uint8_t command, void *data, uint16_t data_len);
+void close_netlink_socket(void);
+void send_netlink_msg(uint8_t command, const void *data, uint16_t data_len);
 void receive_netlink_response(char *response, size_t response_size);
 
 // CLI 命令处理函数声明

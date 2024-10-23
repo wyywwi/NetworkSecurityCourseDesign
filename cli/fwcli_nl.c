@@ -30,7 +30,7 @@ int init_netlink_socket(void) {
 }
 
 // 发送 Netlink 消息，包含命令和数据
-void send_netlink_msg(uint8_t command, void *data, uint16_t data_len) {
+void send_netlink_msg(uint8_t command, const void *data, uint16_t data_len) {
     struct nlmsghdr *nlh;
     struct sockaddr_nl dest_addr;
     struct iovec iov;
