@@ -2,6 +2,16 @@
 CLI_DIR = ./cli
 KERNEL_DIR = ./kernel
 
+# QEMU 配置
+QEMU_SYSTEM = qemu-system-x86_64
+QEMU_IMAGE = ./qemu_images/initrd.img
+QEMU_KERNEL = ./qemu_images/vmlinuz
+QEMU_MEMORY = 512M
+QEMU_NET = user,hostfwd=tcp::10022-:22  # 用于端口转发，将虚拟机的 22 端口映射到主机的 10022 端口
+QEMU_WORKDIR = /root/firewall_test
+SSH_USER = root
+SSH_PASS = root
+
 # Docker 容器和网络配置
 DOCKER_IMAGE = dockerpull.com/ubuntu:20.04
 FIREWALL_CONTAINER = firewall_gateway
@@ -23,6 +33,37 @@ build:
 	@echo "Building CLI and Kernel modules..."
 	$(MAKE) -C $(CLI_DIR) CFLAGS="-I./include -std=c99" build
 	$(MAKE) -C $(KERNEL_DIR) EXTRA_CFLAGS="-I$(CURRENT_DIR)/$(KERNEL_DIR)/include" build
+
+# QEMU 启动虚拟机并测试内核模块
+.PHONY: qemu
+qemu: build
+	@echo "Starting QEMU virtual machine for kernel module testing..."
+	$(QEMU_SYSTEM) -nographic -m $(QEMU_MEMORY) -kernel $(QEMU_KERNEL) -hda $(QEMU_IMAGE) \
+		-append "root=/dev/sda console=ttyS0" -net nic -net $(QEMU_NET) \
+		-nographic -enable-kvm &  # 后台启动虚拟机
+
+	@echo "Waiting for the QEMU VM to boot..."
+	@sleep 10  # 等待虚拟机启动，实际可以使用更智能的等待机制
+
+	@echo "Transferring kernel modules and CLI files to QEMU VM..."
+	# 通过 SSH 将编译好的文件传输到 QEMU 虚拟机中
+	@scp -P 10022 $(CLI_DIR)/fwcli $(KERNEL_DIR)/*.ko $(SSH_USER)@localhost:$(QEMU_WORKDIR)
+
+	@echo "Loading kernel module in QEMU VM..."
+	# 通过 SSH 登录到 QEMU 虚拟机并加载内核模块
+	@sshpass -p $(SSH_PASS) ssh -p 10022 $(SSH_USER)@localhost "insmod $(QEMU_WORKDIR)/kernel/firewall.ko"
+
+	@echo "QEMU environment setup complete!"
+	@echo "To interact with the QEMU VM, use the following command:"
+	@echo "  ssh -p 10022 $(SSH_USER)@localhost"
+
+# 清理 QEMU 进程（停止虚拟机）
+.PHONY: stop-qemu
+stop-qemu:
+	@echo "Stopping QEMU virtual machine..."
+	# 通过 SSH 登录虚拟机并关闭系统
+	@sshpass -p $(SSH_PASS) ssh -p 10022 $(SSH_USER)@localhost "poweroff" || true
+	@echo "QEMU virtual machine stopped."
 
 # 封装 Docker 环境的创建与测试为 docker 目标，并确保编译过程
 .PHONY: docker
@@ -80,7 +121,7 @@ docker: build
 
 	# 在防火墙容器中加载内核模块
 	@echo "Loading kernel modules in firewall gateway..."
-	docker exec -it $(FIREWALL_CONTAINER) bash -c "insmod $(DOCKER_WORKDIR)/kernel/firewall.ko"
+	# docker exec -it $(FIREWALL_CONTAINER) bash -c "insmod $(DOCKER_WORKDIR)/kernel/firewall.ko"
 
 	@echo "Docker environment setup complete!"
 	@echo "To interact with the containers, use the following commands:"
@@ -93,6 +134,9 @@ clean:
 	@echo "Cleaning up..."
 	$(MAKE) -C $(CLI_DIR) clean
 	$(MAKE) -C $(KERNEL_DIR) clean
+
+	# 停止 QEMU 虚拟机
+	$(MAKE) stop-qemu
 
 	# 停止并移除 Docker 容器
 	@if [ "`docker ps -a | grep $(FIREWALL_CONTAINER)`" ]; then \

@@ -54,3 +54,4 @@ dkms.conf
 # vscode
 
 .vscode/
+qemu_images/
