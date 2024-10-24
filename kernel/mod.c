@@ -47,17 +47,17 @@ void hook_exit(void) {
 
 static int mod_init(void){
 	printk("my firewall module loaded.\n");
-	hook_init();
-	netlink_init();
-	conn_init();
+	// hook_init();
+	// netlink_init();
+	// conn_init();
 	return 0;
 }
 
 static void mod_exit(void){
 	printk("my firewall module exit.\n");
-	hook_exit();
-	netlink_exit();
-	conn_exit();
+	// hook_exit();
+	// netlink_exit();
+	// conn_exit();
 }
 
 MODULE_LICENSE("GPL");
